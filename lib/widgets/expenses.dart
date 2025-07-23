@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:khoroch/widgets/chart/chart.dart';
 import 'package:khoroch/widgets/expenses_list/expenses_list.dart';
 import 'package:khoroch/models/expense.dart';
 import 'package:khoroch/widgets/new_expense.dart';
 import 'package:khoroch/widgets/saving_tip.dart';
-import 'package:khoroch/widgets/home/month_year_picker_widget.dart';
+import 'package:khoroch/widgets/home/pick_date_overlay.dart'; // ✅ new overlay
+import 'package:khoroch/widgets/home/sidebar_drawer.dart';
+
 
 class Expenses extends StatefulWidget {
   const Expenses({super.key});
@@ -36,17 +39,13 @@ class _ExpensesState extends State<Expenses> {
   ];
 
   bool _showPicker = false;
-  String _currentMonth = _monthNames[DateTime.now().month - 1];
-
-  static const List<String> _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
+  DateTime _selectedDate = DateTime.now();
 
   List<Expense> get _filteredExpenses {
-    final selectedIndex = _monthNames.indexOf(_currentMonth) + 1;
     return _registeredExpenses.where((expense) {
-      return expense.date.month == selectedIndex;
+      return expense.date.year == _selectedDate.year &&
+          expense.date.month == _selectedDate.month &&
+          expense.date.day == _selectedDate.day;
     }).toList();
   }
 
@@ -92,7 +91,11 @@ class _ExpensesState extends State<Expenses> {
 
   @override
   Widget build(BuildContext context) {
+    final formattedDate = DateFormat('MMM dd, yyyy').format(_selectedDate);
+
     return Scaffold(
+      drawer: SidebarDrawer(onLogout: _logout),
+
       appBar: AppBar(
         title: const Text('Expense Manager'),
         actions: [
@@ -115,7 +118,7 @@ class _ExpensesState extends State<Expenses> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Selected Month: $_currentMonth',
+                    'Selected Date: $formattedDate',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 12),
@@ -125,7 +128,7 @@ class _ExpensesState extends State<Expenses> {
                         _showPicker = !_showPicker;
                       });
                     },
-                    child: const Text('Pick Month'),
+                    child: const Text('Pick Date'),
                   ),
                 ],
               ),
@@ -135,7 +138,7 @@ class _ExpensesState extends State<Expenses> {
               Expanded(
                 child: _filteredExpenses.isEmpty
                     ? const Center(
-                        child: Text('No expenses found for this month.'),
+                        child: Text('No expenses found for this date.'),
                       )
                     : ExpensesList(
                         expenses: _filteredExpenses,
@@ -144,13 +147,12 @@ class _ExpensesState extends State<Expenses> {
               ),
             ],
           ),
-          PickMonthOverlay(
+          PickDateOverlay(
             show: _showPicker,
-            months: _monthNames,
-            selectedMonth: _currentMonth,
-            onMonthSelected: (month) {
+            selectedDate: _selectedDate,
+            onDateSelected: (date) {
               setState(() {
-                _currentMonth = month;
+                _selectedDate = date;
                 _showPicker = false;
               });
             },

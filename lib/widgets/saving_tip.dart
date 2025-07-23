@@ -14,15 +14,19 @@ class SavingTip extends StatelessWidget {
   Widget build(BuildContext context) {
     final random = Random();
     final tip = tips[random.nextInt(tips.length)];
+    final theme = Theme.of(context);
 
     return Card(
       margin: const EdgeInsets.all(12),
-      color: const Color.fromARGB(255, 0, 0, 0),
+      color: theme.colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Text(
           "💡 Smart Tip: $tip",
-          style: const TextStyle(fontSize: 16),
+          style: TextStyle(
+            fontSize: 16,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
         ),
       ),
     );
