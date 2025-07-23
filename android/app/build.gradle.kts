@@ -5,13 +5,17 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// 👇 Add this at the BOTTOM of the file to apply the Google services plugin correctly:
+apply(plugin = "com.google.gms.google-services")
+
+
 android {
     namespace = "com.example.khoroch"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_11    
         targetCompatibility = JavaVersion.VERSION_11
     }
 

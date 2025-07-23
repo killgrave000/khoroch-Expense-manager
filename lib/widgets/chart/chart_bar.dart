@@ -4,30 +4,41 @@ class ChartBar extends StatelessWidget {
   const ChartBar({
     super.key,
     required this.fill,
+    this.isOverspent = false,
   });
 
   final double fill;
+  final bool isOverspent;
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode =
-        MediaQuery.of(context).platformBrightness == Brightness.dark;
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: FractionallySizedBox(
-          heightFactor: fill,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.rectangle,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
-              color: isDarkMode
-                  ? Theme.of(context).colorScheme.secondary
-                  : Theme.of(context).colorScheme.primary.withOpacity(0.65),
+      child: Column(
+        children: [
+          if (isOverspent)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Text(
+                '⚠ High',
+                style: TextStyle(fontSize: 10, color: Colors.red),
+              ),
+            ),
+          Expanded(
+            child: FractionallySizedBox(
+              heightFactor: fill,
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(6),
+                  color: isOverspent
+                      ? Colors.redAccent
+                      : Theme.of(context).colorScheme.primary,
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

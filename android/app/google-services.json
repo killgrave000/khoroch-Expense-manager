@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "190952475216",
+    "project_id": "khoroch-9861a",
+    "storage_bucket": "khoroch-9861a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190952475216:android:b703876c45c648fdc91f55",
+        "android_client_info": {
+          "package_name": "com.example.khoroch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyx5qMNTRpFGeOVvS5EZF1w35_BOFrRY8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

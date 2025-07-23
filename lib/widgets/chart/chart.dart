@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:khoroch/widgets/chart/chart_bar.dart';
 import 'package:khoroch/models/expense.dart';
 
@@ -14,18 +13,17 @@ class Chart extends StatelessWidget {
       ExpenseBucket.forCategory(expenses, Category.leisure),
       ExpenseBucket.forCategory(expenses, Category.travel),
       ExpenseBucket.forCategory(expenses, Category.work),
+      ExpenseBucket.forCategory(expenses, Category.grocery),
     ];
   }
 
   double get maxTotalExpense {
     double maxTotalExpense = 0;
-
     for (final bucket in buckets) {
       if (bucket.totalExpenses > maxTotalExpense) {
         maxTotalExpense = bucket.totalExpenses;
       }
     }
-
     return maxTotalExpense;
   }
 
@@ -33,20 +31,18 @@ class Chart extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode =
         MediaQuery.of(context).platformBrightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(
-        vertical: 16,
-        horizontal: 8,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       width: double.infinity,
-      height: 180,
+      height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         gradient: LinearGradient(
           colors: [
             Theme.of(context).colorScheme.primary.withOpacity(0.3),
-            Theme.of(context).colorScheme.primary.withOpacity(0.0)
+            Theme.of(context).colorScheme.primary.withOpacity(0.0),
           ],
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
@@ -58,12 +54,13 @@ class Chart extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                for (final bucket in buckets) // alternative to map()
+                for (final bucket in buckets)
                   ChartBar(
                     fill: bucket.totalExpenses == 0
                         ? 0
                         : bucket.totalExpenses / maxTotalExpense,
-                  )
+                    isOverspent: bucket.totalExpenses > 5000,
+                  ),
               ],
             ),
           ),
@@ -87,7 +84,7 @@ class Chart extends StatelessWidget {
                   ),
                 )
                 .toList(),
-          )
+          ),
         ],
       ),
     );
