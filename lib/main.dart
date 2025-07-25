@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:khoroch/widgets/expenses.dart';
+
+// Screens
 import 'package:khoroch/screens/login_screen.dart';
 import 'package:khoroch/screens/register_screen.dart';
 import 'package:khoroch/screens/settings_screen.dart';
+import 'package:khoroch/screens/daraz_deals_screen.dart'; // ✅ NEW
+import 'package:khoroch/widgets/expenses.dart';
+
+// Providers
 import 'package:khoroch/providers/theme_provider.dart';
+
 import 'firebase_options.dart';
 
+// Light Theme
 var kColorScheme = ColorScheme.fromSeed(
   seedColor: const Color.fromARGB(255, 96, 59, 181),
 );
 
+// Dark Theme
 var kDarkColorScheme = ColorScheme.fromSeed(
   brightness: Brightness.dark,
   seedColor: const Color.fromARGB(255, 5, 99, 125),
@@ -83,7 +91,8 @@ class MyApp extends StatelessWidget {
         '/': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const Expenses(),
-        '/settings': (context) => const SettingsScreen(), // ✅ link added
+        '/settings': (context) => const SettingsScreen(),
+        '/deals': (context) => const DarazDealsScreen(), // ✅ NEW
       },
     );
   }

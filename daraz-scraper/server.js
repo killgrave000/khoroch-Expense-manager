@@ -1,67 +1,80 @@
 const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
 const cors = require('cors');
+const puppeteer = require('puppeteer');
 
 const app = express();
-app.use(cors()); // Enable CORS for all origins
+app.use(cors()); // Allow all origins
 
-// Helper to get the correct Daraz domain
+// Supported Daraz domains by region
 function getDarazDomain(region) {
   const domains = {
     bd: 'daraz.com.bd',
     pk: 'daraz.pk',
     lk: 'daraz.lk',
     mm: 'daraz.com.mm',
-    np: 'daraz.com.np'
+    np: 'daraz.com.np',
   };
   return domains[region] || domains.bd;
 }
 
-// Route: /api/deals?q=laptop&region=bd
+// Main deals endpoint
 app.get('/api/deals', async (req, res) => {
-  const query = req.query.q || 'discount';
+  const query = req.query.q?.trim() || 'discount';
   const region = req.query.region || 'bd';
   const domain = getDarazDomain(region);
   const url = `https://${domain}/catalog/?q=${encodeURIComponent(query)}`;
 
+  console.log(`🔍 Scraping: ${url}`);
+
   try {
-    const { data } = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Referer': 'https://www.google.com'
-      }
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
-    const $ = cheerio.load(data);
-    const deals = [];
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Updated selector logic based on Daraz HTML as of July 2025
-    $('div[data-qa-locator="product-item"]').each((i, el) => {
-      const anchor = $(el).find('a');
-      const title = anchor.attr('title') || anchor.text().trim();
-      const price = $(el).find('.price--NVB62').first().text().trim();
-      const link = anchor.attr('href');
-      const image = $(el).find('img').attr('src') || $(el).find('img').attr('data-src');
+    // Scrape product cards from the rendered DOM
+    const deals = await page.evaluate(() => {
+      const items = document.querySelectorAll('div[data-qa-locator="product-item"]');
+      const results = [];
 
-      if (title && price && link && image) {
-        deals.push({
-          title,
-          price,
-          link: link.startsWith('http') ? link : `https:${link}`,
-          image: image.startsWith('http') ? image : `https:${image}`
-        });
-      }
+      items.forEach(card => {
+        const title = card.querySelector('img')?.alt || '';
+        const price = card.querySelector('.price--NVB62, .ooOxS')?.textContent?.trim() || '';
+        const image = card.querySelector('img')?.src || '';
+        const anchor = card.querySelector('a');
+        const link = anchor?.href?.startsWith('http') ? anchor.href : `https:${anchor?.getAttribute('href')}`;
+
+        if (title && price && image && link) {
+          results.push({ title, price, image, link });
+        }
+      });
+
+      return results;
     });
+
+    await browser.close();
+
+    if (deals.length === 0) {
+      console.warn('⚠️ No deals found. DOM may have changed.');
+    } else {
+      console.log(`✅ ${deals.length} deals found.`);
+    }
 
     res.json({ deals });
   } catch (error) {
-    console.error('🔥 Error fetching Daraz page:', error.message);
-    res.status(500).json({ error: 'Failed to fetch deals', details: error.message });
+    console.error('🔥 Puppeteer scraping error:', error.message);
+    res.status(500).json({
+      error: 'Failed to scrape Daraz',
+      details: error.message,
+    });
   }
 });
 
+// Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Scraper running at http://localhost:${PORT}/api/deals`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Puppeteer server running at http://0.0.0.0:${PORT}/api/deals`);
 });

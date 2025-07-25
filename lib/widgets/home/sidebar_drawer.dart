@@ -41,6 +41,14 @@ class SidebarDrawer extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.local_offer_outlined),
+            title: const Text('Smart Deals'),
+            onTap: () {
+              Navigator.pop(context); // Close drawer
+              Navigator.pushNamed(context, '/deals');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: onLogout,
@@ -66,7 +74,6 @@ class SidebarDrawer extends StatelessWidget {
               );
             },
           ),
-          
         ],
       ),
     );

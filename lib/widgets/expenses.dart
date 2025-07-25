@@ -5,9 +5,9 @@ import 'package:khoroch/widgets/expenses_list/expenses_list.dart';
 import 'package:khoroch/models/expense.dart';
 import 'package:khoroch/widgets/new_expense.dart';
 import 'package:khoroch/widgets/saving_tip.dart';
-import 'package:khoroch/widgets/home/pick_date_overlay.dart'; // ✅ new overlay
+import 'package:khoroch/widgets/home/pick_date_overlay.dart';
 import 'package:khoroch/widgets/home/sidebar_drawer.dart';
-
+import 'package:khoroch/database/database_helper.dart'; // ✅ DB Helper import
 
 class Expenses extends StatefulWidget {
   const Expenses({super.key});
@@ -17,29 +17,22 @@ class Expenses extends StatefulWidget {
 }
 
 class _ExpensesState extends State<Expenses> {
-  final List<Expense> _registeredExpenses = [
-    Expense(
-      title: 'Course',
-      amount: 190,
-      date: DateTime.now(),
-      category: Category.work,
-    ),
-    Expense(
-      title: 'Cinema',
-      amount: 500,
-      date: DateTime.now(),
-      category: Category.leisure,
-    ),
-    Expense(
-      title: 'Groceries',
-      amount: 120,
-      date: DateTime(2024, 6, 15),
-      category: Category.food,
-    ),
-  ];
-
+  List<Expense> _registeredExpenses = [];
   bool _showPicker = false;
   DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExpenses();
+  }
+
+  Future<void> _loadExpenses() async {
+    final expenses = await DatabaseHelper.instance.getAllExpenses();
+    setState(() {
+      _registeredExpenses = expenses;
+    });
+  }
 
   List<Expense> get _filteredExpenses {
     return _registeredExpenses.where((expense) {
@@ -57,11 +50,16 @@ class _ExpensesState extends State<Expenses> {
     );
   }
 
-  void _removeExpense(Expense expense) {
-    final expenseIndex = _registeredExpenses.indexOf(expense);
-    setState(() {
-      _registeredExpenses.remove(expense);
-    });
+  Future<void> _addExpense(Expense expense) async {
+    await DatabaseHelper.instance.insertExpense(expense);
+    await _loadExpenses();
+  }
+
+  Future<void> _removeExpense(Expense expense) async {
+    final index = _registeredExpenses.indexOf(expense);
+    await DatabaseHelper.instance.deleteExpense(expense.id);
+    await _loadExpenses();
+
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -69,20 +67,13 @@ class _ExpensesState extends State<Expenses> {
         content: const Text('Expense Deleted.'),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () {
-            setState(() {
-              _registeredExpenses.insert(expenseIndex, expense);
-            });
+          onPressed: () async {
+            await DatabaseHelper.instance.insertExpense(expense);
+            await _loadExpenses();
           },
         ),
       ),
     );
-  }
-
-  void _addExpense(Expense expense) {
-    setState(() {
-      _registeredExpenses.add(expense);
-    });
   }
 
   void _logout() {
@@ -95,7 +86,6 @@ class _ExpensesState extends State<Expenses> {
 
     return Scaffold(
       drawer: SidebarDrawer(onLogout: _logout),
-
       appBar: AppBar(
         title: const Text('Expense Manager'),
         actions: [

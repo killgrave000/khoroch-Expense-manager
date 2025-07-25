@@ -59,7 +59,7 @@ class Chart extends StatelessWidget {
                     fill: bucket.totalExpenses == 0
                         ? 0
                         : bucket.totalExpenses / maxTotalExpense,
-                    isOverspent: bucket.totalExpenses > 5000,
+                    isOverspent: bucket.totalExpenses > 10000,
                   ),
               ],
             ),

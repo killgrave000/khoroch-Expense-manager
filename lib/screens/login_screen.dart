@@ -35,9 +35,23 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            const SizedBox(height: 20),
+            // ✅ App Logo
+            Center(
+              child: Image.asset(
+                'assets/icons/logo.png',
+                width: 120,
+                height: 120,
+              ),
+            ),
+            const SizedBox(height: 30),
             if (errorMessage != null)
-              Text(errorMessage!, style: const TextStyle(color: Colors.red)),
+              Text(
+                errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
             TextField(
               controller: emailController,
               decoration: const InputDecoration(labelText: "Email"),
