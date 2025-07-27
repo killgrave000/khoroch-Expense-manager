@@ -85,7 +85,9 @@ class _ExpensesState extends State<Expenses> {
     final formattedDate = DateFormat('MMM dd, yyyy').format(_selectedDate);
 
     return Scaffold(
-      drawer: SidebarDrawer(onLogout: _logout),
+      drawer: SidebarDrawer(onLogout: _logout,
+        expenses: _registeredExpenses,
+      ),
       appBar: AppBar(
         title: const Text('Expense Manager'),
         actions: [

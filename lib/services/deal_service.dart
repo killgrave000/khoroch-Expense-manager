@@ -10,7 +10,7 @@ class DealService {
   static const int _port = 3000;
 
   // 🌐 Your active Ngrok domain (HTTPS, no protocol prefix)
-  static const String _ngrokDomain = 'b2f3ad3566f7.ngrok-free.app'; // ✅ updated
+  static const String _ngrokDomain = 'ee558e311bf7.ngrok-free.app'; // ✅ updated
 
   // 🟢 Toggle to use Ngrok (true = live URL; false = local network testing)
   static const bool _useNgrok = true;

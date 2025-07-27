@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:khoroch/screens/budget_settings_screen.dart';
+import 'package:khoroch/screens/summary_screen.dart'; // ✅ import summary screen
+import 'package:khoroch/models/expense.dart'; // required to pass expenses
 
 class SidebarDrawer extends StatelessWidget {
   final VoidCallback onLogout;
+  final List<Expense> expenses; // ✅ add expenses to constructor
 
-  const SidebarDrawer({Key? key, required this.onLogout}) : super(key: key);
+  const SidebarDrawer({
+    Key? key,
+    required this.onLogout,
+    required this.expenses,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +52,39 @@ class SidebarDrawer extends StatelessWidget {
             leading: const Icon(Icons.local_offer_outlined),
             title: const Text('Smart Deals'),
             onTap: () {
-              Navigator.pop(context); // Close drawer
+              Navigator.pop(context);
               Navigator.pushNamed(context, '/deals');
             },
           ),
+
+          /// ✅ Budget Feature
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet_outlined),
+            title: const Text('Set Budgets'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BudgetSettingsScreen()),
+              );
+            },
+          ),
+
+          /// ✅ Summary Screen Navigation
+          ListTile(
+            leading: const Icon(Icons.summarize_outlined),
+            title: const Text('Summary'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SummaryScreen(expenses: expenses),
+                ),
+              );
+            },
+          ),
+
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),

@@ -6,7 +6,7 @@ final formatter = DateFormat.yMd();
 const uuid = Uuid();
 
 /// Expense categories
-enum Category { food, travel, leisure, work, grocery }
+enum Category { food, travel, leisure, work, grocery, bills }
 
 /// Icons mapped to categories
 const categoryIcons = {
@@ -15,6 +15,7 @@ const categoryIcons = {
   Category.leisure: Icons.movie,
   Category.grocery: Icons.local_grocery_store,
   Category.work: Icons.work,
+  Category.bills: Icons.receipt_long,
 };
 
 /// Model class for a single expense
@@ -25,7 +26,7 @@ class Expense {
     required this.date,
     required this.category,
     String? id,
-  }) : id = id ?? uuid.v4(); // optional for fromMap()
+  }) : id = id ?? uuid.v4();
 
   final String id;
   final String title;
@@ -33,23 +34,21 @@ class Expense {
   final DateTime date;
   final Category category;
 
-  /// Format date for display
-  String get formattedDate {
-    return formatter.format(date);
-  }
+  /// Display-friendly date
+  String get formattedDate => formatter.format(date);
 
-  /// Convert to Map for database insertion
+  /// Convert to Map for SQLite
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'amount': amount,
       'date': date.toIso8601String(),
-      'category': category.name, // Save enum as string
+      'category': category.name, // enum as string
     };
   }
 
-  /// Create Expense object from database Map
+  /// Recreate from SQLite row
   factory Expense.fromMap(Map<String, dynamic> map) {
     return Expense(
       id: map['id'],
@@ -61,24 +60,20 @@ class Expense {
   }
 }
 
-/// A container for all expenses of a single category
+/// Bucket of expenses by category
 class ExpenseBucket {
   const ExpenseBucket({required this.category, required this.expenses});
 
-  /// Create a bucket for a specific category from a list of all expenses
+  /// Create a filtered bucket
   ExpenseBucket.forCategory(List<Expense> allExpenses, this.category)
-      : expenses =
-            allExpenses.where((expense) => expense.category == category).toList();
+      : expenses = allExpenses
+            .where((expense) => expense.category == category)
+            .toList();
 
   final Category category;
   final List<Expense> expenses;
 
-  /// Calculate total amount spent in this category
-  double get totalExpenses {
-    double sum = 0;
-    for (final expense in expenses) {
-      sum += expense.amount;
-    }
-    return sum;
-  }
+  /// Total sum in this category
+  double get totalExpenses =>
+      expenses.fold(0, (sum, e) => sum + e.amount);
 }
