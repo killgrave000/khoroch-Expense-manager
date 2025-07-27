@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:khoroch/models/expense.dart';
 import 'package:khoroch/models/budget.dart';
 import 'package:khoroch/database/database_helper.dart';
+import 'package:khoroch/utils/notification_helper.dart'; // ✅ Add this
 
 class SummaryWidget extends StatefulWidget {
   final List<Expense> expenses;
@@ -29,6 +30,35 @@ class _SummaryWidgetState extends State<SummaryWidget> {
     setState(() {
       _budgetMap = {for (var b in budgets) b.category: b.amount};
     });
+
+    _checkOverspending(); // ✅ Check budget status once budgets are loaded
+  }
+
+  void _checkOverspending() {
+    final Map<BudgetCategory, double> spentByCategory = {};
+    for (final expense in widget.expenses.where((e) => e.amount < 0)) {
+      final category = _mapExpenseToBudgetCategory(expense.category);
+      spentByCategory[category] =
+          (spentByCategory[category] ?? 0) + expense.amount.abs();
+    }
+
+    spentByCategory.forEach((category, spent) {
+      final limit = _budgetMap[category] ?? double.infinity;
+
+      if (spent > limit) {
+        NotificationHelper.showBudgetAlert(
+          title: 'Budget Exceeded!',
+          body:
+              'You’ve spent ৳${spent.toStringAsFixed(0)} in ${category.name} (limit: ৳${limit.toStringAsFixed(0)}).',
+        );
+      } else if (spent > 0.8 * limit) {
+        NotificationHelper.showBudgetAlert(
+          title: 'Approaching Budget Limit',
+          body:
+              'You’ve spent over 80% of your ${category.name} budget (৳${spent.toStringAsFixed(0)} of ৳${limit.toStringAsFixed(0)}).',
+        );
+      }
+    });
   }
 
   @override
@@ -45,11 +75,11 @@ class _SummaryWidgetState extends State<SummaryWidget> {
 
     final int balance = incomeTotal - expenseTotal;
 
-    // Check overspending across all budgets
     final Map<BudgetCategory, double> spentByCategory = {};
     for (final expense in widget.expenses.where((e) => e.amount < 0)) {
       final category = _mapExpenseToBudgetCategory(expense.category);
-      spentByCategory[category] = (spentByCategory[category] ?? 0) + expense.amount.abs();
+      spentByCategory[category] =
+          (spentByCategory[category] ?? 0) + expense.amount.abs();
     }
 
     final List<String> overspentCategories = [];
@@ -83,9 +113,11 @@ class _SummaryWidgetState extends State<SummaryWidget> {
           padding: const EdgeInsets.all(8.0),
           child: Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

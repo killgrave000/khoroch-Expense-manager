@@ -25,16 +25,16 @@ class _SummaryScreenState extends State<SummaryScreen> {
   }
 
   Future<void> _loadBudgetsAndSpendings() async {
-    final budgets = await DatabaseHelper.instance.getBudgets();
-
     final now = DateTime.now();
+    final selectedMonth = DateTime(now.year, now.month);
+
+    final budgets = await DatabaseHelper.instance.getBudgetsForMonth(selectedMonth);
     final startOfDay = DateTime(now.year, now.month, now.day);
     final startOfMonth = DateTime(now.year, now.month, 1);
 
     final daily = <BudgetCategory, double>{};
     final monthly = <BudgetCategory, double>{};
 
-    // ✅ Collect only POSITIVE (spending) amounts
     for (final expense in widget.expenses.where((e) => e.amount > 0)) {
       final budgetCat = _mapExpenseToBudgetCategory(expense.category);
       final date = expense.date;
@@ -67,6 +67,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
         return BudgetCategory.work;
       case Category.grocery:
         return BudgetCategory.grocery;
+      case Category.bills:
+        return BudgetCategory.bills;
       default:
         return BudgetCategory.food;
     }

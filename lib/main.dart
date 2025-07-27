@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart'; // ✅ NEW
 
 // Screens
 import 'package:khoroch/screens/login_screen.dart';
 import 'package:khoroch/screens/register_screen.dart';
 import 'package:khoroch/screens/settings_screen.dart';
-import 'package:khoroch/screens/daraz_deals_screen.dart'; // ✅ NEW
+import 'package:khoroch/screens/daraz_deals_screen.dart';
 import 'package:khoroch/widgets/expenses.dart';
 
 // Providers
 import 'package:khoroch/providers/theme_provider.dart';
 
 import 'firebase_options.dart';
+
+// Notification plugin instance
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 // Light Theme
 var kColorScheme = ColorScheme.fromSeed(
@@ -30,6 +36,17 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Notification init
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const initSettings = InitializationSettings(android: androidSettings);
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+  // ✅ Ask for permission on Android 13+
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
+
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
@@ -92,7 +109,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const Expenses(),
         '/settings': (context) => const SettingsScreen(),
-        '/deals': (context) => const DarazDealsScreen(), // ✅ NEW
+        '/deals': (context) => const DarazDealsScreen(),
       },
     );
   }

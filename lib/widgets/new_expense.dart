@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:khoroch/models/expense.dart';
+import 'package:khoroch/database/database_helper.dart';
 
 final formatter = DateFormat.yMd();
 
@@ -18,6 +19,7 @@ class _NewExpenseState extends State<NewExpense> {
   final _amountController = TextEditingController();
   DateTime? _selectedDate;
   Category _selectedCategory = Category.leisure;
+  List<Expense> _suggestions = [];
 
   void _presentDatePicker() async {
     final now = DateTime.now();
@@ -35,6 +37,27 @@ class _NewExpenseState extends State<NewExpense> {
         _selectedDate = pickedDate;
       });
     }
+  }
+
+  void _onTitleChanged(String input) async {
+    if (input.trim().isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+
+    final matches = await DatabaseHelper.instance.getMatchingExpenseSuggestions(input);
+    setState(() {
+      _suggestions = matches;
+    });
+  }
+
+  void _fillFromSuggestion(Expense suggestion) {
+    _titleController.text = suggestion.title;
+    _amountController.text = suggestion.amount.toStringAsFixed(0);
+    setState(() {
+      _selectedCategory = suggestion.category;
+      _suggestions = [];
+    });
   }
 
   void _submitExpenseData() {
@@ -89,8 +112,30 @@ class _NewExpenseState extends State<NewExpense> {
           TextField(
             controller: _titleController,
             maxLength: 50,
+            onChanged: _onTitleChanged,
             decoration: const InputDecoration(labelText: 'Title'),
           ),
+
+          // 🔍 Suggestion List
+          if (_suggestions.isNotEmpty)
+            Container(
+              alignment: Alignment.centerLeft,
+              constraints: const BoxConstraints(maxHeight: 180),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _suggestions.length,
+                itemBuilder: (context, index) {
+                  final exp = _suggestions[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(exp.title),
+                    subtitle: Text("৳${exp.amount} — ${exp.category.name}"),
+                    onTap: () => _fillFromSuggestion(exp),
+                  );
+                },
+              ),
+            ),
+
           Row(
             children: [
               Expanded(

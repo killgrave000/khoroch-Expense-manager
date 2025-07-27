@@ -20,13 +20,13 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // ✅ increment when schema changes
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Create expenses table
     await db.execute('''
       CREATE TABLE expenses(
         id TEXT PRIMARY KEY,
@@ -37,17 +37,25 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create budgets table
     await db.execute('''
       CREATE TABLE budgets(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category TEXT NOT NULL UNIQUE,
-        amount REAL NOT NULL
+        category TEXT,
+        amount REAL,
+        month TEXT
       )
     ''');
   }
 
-  // Expense methods
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE budgets ADD COLUMN month TEXT');
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // EXPENSE METHODS
+
   Future<int> insertExpense(Expense expense) async {
     final db = await database;
     return await db.insert(
@@ -68,7 +76,21 @@ class DatabaseHelper {
     return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Budget methods
+  Future<List<Expense>> getMatchingExpenseSuggestions(String input) async {
+    final db = await database;
+    final maps = await db.query(
+      'expenses',
+      where: 'LOWER(title) LIKE ?',
+      whereArgs: ['%${input.toLowerCase()}%'],
+      orderBy: 'date DESC',
+      limit: 5,
+    );
+    return maps.map((e) => Expense.fromMap(e)).toList();
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // BUDGET METHODS
+
   Future<void> insertOrUpdateBudget(Budget budget) async {
     final db = await database;
     await db.insert(
@@ -80,7 +102,25 @@ class DatabaseHelper {
 
   Future<List<Budget>> getBudgets() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('budgets');
-    return List.generate(maps.length, (i) => Budget.fromMap(maps[i]));
+    final maps = await db.query('budgets');
+    return maps.map((map) => Budget.fromMap(map)).toList();
+  }
+
+  Future<List<Budget>> getBudgetsForMonth(DateTime month) async {
+    final db = await database;
+
+    final start = DateTime(month.year, month.month);
+    final end = DateTime(month.year, month.month + 1);
+
+    final maps = await db.query(
+      'budgets',
+      where: 'month >= ? AND month < ?',
+      whereArgs: [
+        start.toIso8601String(),
+        end.toIso8601String(),
+      ],
+    );
+
+    return maps.map((map) => Budget.fromMap(map)).toList();
   }
 }

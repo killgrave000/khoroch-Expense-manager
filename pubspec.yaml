@@ -46,6 +46,8 @@ dependencies:
   path: ^1.9.0
   flutter_launcher_icons: ^0.14.4
   flutter_local_notifications: ^17.1.0
+  permission_handler: ^11.3.1
+
 
   
 
