@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:khoroch/screens/budget_settings_screen.dart';
-import 'package:khoroch/screens/summary_screen.dart'; // ✅ import summary screen
-import 'package:khoroch/models/expense.dart'; // required to pass expenses
+import 'package:khoroch/screens/summary_screen.dart';
+import 'package:khoroch/screens/daraz_deals_screen.dart'; // ✅ Import Smart Deals screen
+import 'package:khoroch/models/expense.dart';
 
 class SidebarDrawer extends StatelessWidget {
   final VoidCallback onLogout;
-  final List<Expense> expenses; // ✅ add expenses to constructor
+  final List<Expense> expenses;
 
   const SidebarDrawer({
     Key? key,
@@ -32,32 +33,41 @@ class SidebarDrawer extends StatelessWidget {
               ),
             ),
           ),
+
+          /// 📊 Chart Placeholder
           ListTile(
             leading: const Icon(Icons.bar_chart),
             title: const Text('Charts'),
             onTap: () {
               Navigator.pop(context);
-              // Add chart navigation logic
+              // TODO: Implement Chart Navigation
             },
           ),
+
+          /// 💡 Saving Tips Placeholder
           ListTile(
             leading: const Icon(Icons.savings),
             title: const Text('Saving Tips'),
             onTap: () {
               Navigator.pop(context);
-              // Add tip section scroll or navigation
+              // TODO: Scroll or Navigate to Tips
             },
           ),
+
+          /// 🧠 Smart Deals (Daraz + Chaldal)
           ListTile(
             leading: const Icon(Icons.local_offer_outlined),
             title: const Text('Smart Deals'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/deals');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DarazDealsScreen()),
+              );
             },
           ),
 
-          /// ✅ Budget Feature
+          /// 💰 Budget Settings
           ListTile(
             leading: const Icon(Icons.account_balance_wallet_outlined),
             title: const Text('Set Budgets'),
@@ -70,7 +80,7 @@ class SidebarDrawer extends StatelessWidget {
             },
           ),
 
-          /// ✅ Summary Screen Navigation
+          /// 📋 Summary Report
           ListTile(
             leading: const Icon(Icons.summarize_outlined),
             title: const Text('Summary'),
@@ -85,12 +95,16 @@ class SidebarDrawer extends StatelessWidget {
             },
           ),
 
+          /// 🔓 Logout
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: onLogout,
           ),
+
           const Divider(),
+
+          /// ⚙️ Settings
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
@@ -99,6 +113,8 @@ class SidebarDrawer extends StatelessWidget {
               Navigator.pushNamed(context, '/settings');
             },
           ),
+
+          /// ℹ️ About
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
