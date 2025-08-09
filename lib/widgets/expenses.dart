@@ -42,11 +42,13 @@ class _ExpensesState extends State<Expenses> {
     }).toList();
   }
 
-  void _openAddExpenseOverlay() {
-    showModalBottomSheet(
-      isScrollControlled: true,
-      context: context,
-      builder: (ctx) => NewExpense(onAddExpense: _addExpense),
+  // ⬇️ Open NewExpense as a full-screen page (so keyboard never hides it)
+  void _openAddExpensePage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => NewExpense(onAddExpense: _addExpense),
+      ),
     );
   }
 
@@ -56,7 +58,6 @@ class _ExpensesState extends State<Expenses> {
   }
 
   Future<void> _removeExpense(Expense expense) async {
-    final index = _registeredExpenses.indexOf(expense);
     await DatabaseHelper.instance.deleteExpense(expense.id);
     await _loadExpenses();
 
@@ -85,15 +86,17 @@ class _ExpensesState extends State<Expenses> {
     final formattedDate = DateFormat('MMM dd, yyyy').format(_selectedDate);
 
     return Scaffold(
-      drawer: SidebarDrawer(onLogout: _logout,
+      drawer: SidebarDrawer(
+        onLogout: _logout,
         expenses: _registeredExpenses,
       ),
       appBar: AppBar(
         title: const Text('Expense Manager'),
         actions: [
           IconButton(
-            onPressed: _openAddExpenseOverlay,
+            onPressed: _openAddExpensePage, // ⬅️ use the full-screen opener
             icon: const Icon(Icons.add),
+            tooltip: 'Add Expense',
           ),
           IconButton(
             onPressed: _logout,
@@ -125,7 +128,7 @@ class _ExpensesState extends State<Expenses> {
                 ],
               ),
               const SizedBox(height: 8),
-              SavingTip(),
+               SavingTip(),
               Chart(expenses: _filteredExpenses),
               Expanded(
                 child: _filteredExpenses.isEmpty
