@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:khoroch/models/deal.dart';
 import 'package:khoroch/services/deal_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DarazDealsScreen extends StatefulWidget {
   const DarazDealsScreen({super.key});
@@ -15,7 +15,8 @@ class _DarazDealsScreenState extends State<DarazDealsScreen> {
   late Future<List<Deal>> _futureDeals;
   final TextEditingController _searchController = TextEditingController();
   String _searchTerm = 'grocery';
-  String _region = 'bd';
+  String _region = 'daraz'; // Default to daraz
+  final List<String> _sources = ['daraz', 'chaldal'];
 
   @override
   void initState() {
@@ -44,10 +45,8 @@ class _DarazDealsScreenState extends State<DarazDealsScreen> {
   }
 
   void _copyAllDeals(List<Deal> deals) {
-    final allText = deals
-        .map((d) => '${d.title}\n${d.price}\n${d.link}')
-        .join('\n\n');
-
+    final allText =
+        deals.map((d) => '${d.title}\n${d.price}\n${d.link}').join('\n\n');
     Clipboard.setData(ClipboardData(text: allText));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('✅ All deals copied!')),
@@ -57,21 +56,37 @@ class _DarazDealsScreenState extends State<DarazDealsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search Smart Deals'),
-      ),
+      appBar: AppBar(title: const Text('Search Smart Deals')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
               children: [
+                DropdownButton<String>(
+                  value: _region,
+                  items: _sources.map((source) {
+                    return DropdownMenuItem(
+                      value: source,
+                      child: Text(source.toUpperCase()),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _region = value;
+                      });
+                      _fetchDeals();
+                    }
+                  },
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    decoration: const InputDecoration(
-                      labelText: 'Search Daraz',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: 'Search $_region',
+                      border: const OutlineInputBorder(),
                     ),
                     onSubmitted: (_) => _onSearch(),
                   ),
@@ -102,7 +117,6 @@ class _DarazDealsScreenState extends State<DarazDealsScreen> {
                   }
 
                   final deals = snapshot.data!;
-
                   return Column(
                     children: [
                       Align(
@@ -136,16 +150,19 @@ class _DarazDealsScreenState extends State<DarazDealsScreen> {
                                 ),
                                 subtitle: Text(
                                   deal.price,
-                                  style: const TextStyle(color: Colors.green),
+                                  style:
+                                      const TextStyle(color: Colors.green),
                                 ),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.copy),
                                   onPressed: () {
                                     Clipboard.setData(ClipboardData(
-                                      text: '${deal.title}\n${deal.price}\n${deal.link}',
+                                      text:
+                                          '${deal.title}\n${deal.price}\n${deal.link}',
                                     ));
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Deal copied!')),
+                                      const SnackBar(
+                                          content: Text('Deal copied!')),
                                     );
                                   },
                                 ),
