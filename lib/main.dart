@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart'; // ✅ NEW
+import 'package:permission_handler/permission_handler.dart';
 
 // Screens
 import 'package:khoroch/screens/login_screen.dart';
@@ -14,11 +13,10 @@ import 'package:khoroch/widgets/expenses.dart';
 // Providers
 import 'package:khoroch/providers/theme_provider.dart';
 
-import 'firebase_options.dart';
+// Local notifications helper (Option A setup)
+import 'package:khoroch/utils/notification_helper.dart';
 
-// Notification plugin instance
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
+import 'firebase_options.dart';
 
 // Light Theme
 var kColorScheme = ColorScheme.fromSeed(
@@ -31,21 +29,27 @@ var kDarkColorScheme = ColorScheme.fromSeed(
   seedColor: const Color.fromARGB(255, 5, 99, 125),
 );
 
+Future<void> _ensureNotificationPermission() async {
+  // Request notification permission (Android 13+ & iOS)
+  final status = await Permission.notification.status;
+  if (status.isDenied || status.isRestricted) {
+    await Permission.notification.request();
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Notification init
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const initSettings = InitializationSettings(android: androidSettings);
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
+  // Local notifications (channels + iOS/Android init)
+  await NotificationHelper.init();
 
-  // ✅ Ask for permission on Android 13+
-  if (await Permission.notification.isDenied) {
-    await Permission.notification.request();
-  }
+  // Ask user permission for notifications
+  await _ensureNotificationPermission();
 
   runApp(
     ChangeNotifierProvider(

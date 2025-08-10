@@ -123,7 +123,7 @@ class SidebarDrawer extends StatelessWidget {
                 context: context,
                 applicationName: 'Khoroch',
                 applicationVersion: '1.0.0',
-                applicationLegalese: '© 2025 YourTeam',
+                applicationLegalese: '© 2025 MahirLabib',
               );
             },
           ),

@@ -4,6 +4,11 @@ import 'package:khoroch/models/expense.dart';
 import 'package:khoroch/models/budget.dart';
 import 'package:khoroch/database/database_helper.dart';
 
+// ✅ Pop-up + throttle + local notification
+import 'package:khoroch/utils/alert_popups.dart';
+import 'package:khoroch/utils/budget_alert_guard.dart';
+import 'package:khoroch/utils/notification_helper.dart';
+
 class SummaryScreen extends StatefulWidget {
   final List<Expense> expenses;
 
@@ -17,6 +22,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
   Map<BudgetCategory, double> _budgetMap = {};
   Map<BudgetCategory, double> _monthlySpending = {};
   Map<BudgetCategory, double> _dailySpending = {};
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -24,17 +31,28 @@ class _SummaryScreenState extends State<SummaryScreen> {
     _loadBudgetsAndSpendings();
   }
 
+  @override
+  void didUpdateWidget(covariant SummaryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.expenses != widget.expenses) {
+      _loadBudgetsAndSpendings();
+    }
+  }
+
   Future<void> _loadBudgetsAndSpendings() async {
     final now = DateTime.now();
     final selectedMonth = DateTime(now.year, now.month);
 
-    final budgets = await DatabaseHelper.instance.getBudgetsForMonth(selectedMonth);
+    final budgets =
+        await DatabaseHelper.instance.getBudgetsForMonth(selectedMonth);
     final startOfDay = DateTime(now.year, now.month, now.day);
     final startOfMonth = DateTime(now.year, now.month, 1);
 
     final daily = <BudgetCategory, double>{};
     final monthly = <BudgetCategory, double>{};
 
+    // ⚠️ Do not change the positive/negative logic:
+    // You are summing entries where amount > 0 as spending.
     for (final expense in widget.expenses.where((e) => e.amount > 0)) {
       final budgetCat = _mapExpenseToBudgetCategory(expense.category);
       final date = expense.date;
@@ -48,11 +66,116 @@ class _SummaryScreenState extends State<SummaryScreen> {
       }
     }
 
+    if (!mounted) return;
     setState(() {
+      _selectedMonth = selectedMonth;
       _budgetMap = {for (var b in budgets) b.category: b.amount};
       _monthlySpending = monthly;
       _dailySpending = daily;
+      _loaded = true;
     });
+
+    // Run thresholds AFTER first frame so dialogs can show
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkThresholds(context);
+    });
+  }
+
+  Future<void> _checkThresholds(BuildContext context) async {
+    if (!_loaded) return;
+
+    for (final cat in BudgetCategory.values) {
+      final limit = _budgetMap[cat] ?? 0;
+      if (limit <= 0) continue; // skip categories with no budget set
+
+      final spent = _monthlySpending[cat] ?? 0; // already using your positive values
+
+      if (spent > limit) {
+        await _notifyExceeded(
+          context,
+          categoryName: cat.name,
+          spent: spent,
+          limit: limit,
+          month: _selectedMonth,
+        );
+      } else if (spent >= 0.8 * limit) {
+        await _notifyApproaching(
+          context,
+          categoryName: cat.name,
+          spent: spent,
+          limit: limit,
+          month: _selectedMonth,
+        );
+      }
+    }
+  }
+
+  Future<void> _notifyExceeded(
+    BuildContext context, {
+    required String categoryName,
+    required double spent,
+    required double limit,
+    required DateTime month,
+  }) async {
+    final over = (spent - limit).toStringAsFixed(0);
+    final title = 'Budget Exceeded: $categoryName';
+    final body =
+        'You exceeded this month’s $categoryName budget by ৳$over (spent ৳${spent.toStringAsFixed(0)} of ৳${limit.toStringAsFixed(0)}).';
+
+    final shouldShow = await BudgetAlertGuard.shouldNotify(
+      categoryKey: categoryName,
+      month: month,
+      type: 'exceeded',
+    );
+    if (!shouldShow) return;
+
+    if (mounted) {
+      await AlertPopups.showBudgetPopup(
+        context,
+        title: title,
+        message: body,
+        primaryLabel: 'Open Summary',
+        onPrimary: () {
+          // Optionally navigate or scroll
+          // Navigator.pushNamed(context, '/summary');
+        },
+      );
+    }
+
+    await NotificationHelper.showBudgetAlert(title: title, body: body);
+  }
+
+  Future<void> _notifyApproaching(
+    BuildContext context, {
+    required String categoryName,
+    required double spent,
+    required double limit,
+    required DateTime month,
+  }) async {
+    final title = 'Approaching Budget: $categoryName';
+    final body =
+        'You’ve crossed 80% of your $categoryName budget this month (৳${spent.toStringAsFixed(0)} of ৳${limit.toStringAsFixed(0)}).';
+
+    final shouldShow = await BudgetAlertGuard.shouldNotify(
+      categoryKey: categoryName,
+      month: month,
+      type: 'approach',
+    );
+    if (!shouldShow) return;
+
+    if (mounted) {
+      await AlertPopups.showBudgetPopup(
+        context,
+        title: title,
+        message: body,
+        primaryLabel: 'Open Summary',
+        onPrimary: () {
+          // Navigator.pushNamed(context, '/summary');
+        },
+      );
+    }
+
+    await NotificationHelper.showBudgetAlert(title: title, body: body);
   }
 
   BudgetCategory _mapExpenseToBudgetCategory(Category category) {

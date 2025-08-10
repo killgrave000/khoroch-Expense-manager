@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:khoroch/models/expense.dart';
 import 'package:khoroch/models/budget.dart';
 import 'package:khoroch/database/database_helper.dart';
-import 'package:khoroch/utils/notification_helper.dart'; // ✅ Add this
+
+// ✅ Pop-up + throttle + notification
+import 'package:khoroch/utils/alert_popups.dart';
+import 'package:khoroch/utils/budget_alert_guard.dart';
+import 'package:khoroch/utils/notification_helper.dart';
 
 class SummaryWidget extends StatefulWidget {
   final List<Expense> expenses;
@@ -18,6 +22,7 @@ class SummaryWidget extends StatefulWidget {
 
 class _SummaryWidgetState extends State<SummaryWidget> {
   Map<BudgetCategory, double> _budgetMap = {};
+  bool _budgetsLoaded = false;
 
   @override
   void initState() {
@@ -25,16 +30,33 @@ class _SummaryWidgetState extends State<SummaryWidget> {
     _loadBudgets();
   }
 
-  Future<void> _loadBudgets() async {
-    final budgets = await DatabaseHelper.instance.getBudgets();
-    setState(() {
-      _budgetMap = {for (var b in budgets) b.category: b.amount};
-    });
-
-    _checkOverspending(); // ✅ Check budget status once budgets are loaded
+  @override
+  void didUpdateWidget(covariant SummaryWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If expenses changed, re-check after the next frame (when the widget is visible)
+    if (_budgetsLoaded && oldWidget.expenses != widget.expenses) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _checkOverspending(context);
+      });
+    }
   }
 
-  void _checkOverspending() {
+  Future<void> _loadBudgets() async {
+    final budgets = await DatabaseHelper.instance.getBudgets();
+    if (!mounted) return;
+    setState(() {
+      _budgetMap = {for (var b in budgets) b.category: b.amount};
+      _budgetsLoaded = true;
+    });
+
+    // ✅ Run after first frame so dialogs can actually show
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkOverspending(context);
+    });
+  }
+
+  Future<void> _checkOverspending(BuildContext context) async {
+    // Aggregate spending by category (negative amounts are expenses)
     final Map<BudgetCategory, double> spentByCategory = {};
     for (final expense in widget.expenses.where((e) => e.amount < 0)) {
       final category = _mapExpenseToBudgetCategory(expense.category);
@@ -42,23 +64,108 @@ class _SummaryWidgetState extends State<SummaryWidget> {
           (spentByCategory[category] ?? 0) + expense.amount.abs();
     }
 
-    spentByCategory.forEach((category, spent) {
+    final DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
+
+    // Evaluate thresholds per category
+    for (final entry in spentByCategory.entries) {
+      final category = entry.key;
+      final spent = entry.value;
       final limit = _budgetMap[category] ?? double.infinity;
 
+      // Skip if no limit set
+      if (limit == double.infinity || limit <= 0) continue;
+
       if (spent > limit) {
-        NotificationHelper.showBudgetAlert(
-          title: 'Budget Exceeded!',
-          body:
-              'You’ve spent ৳${spent.toStringAsFixed(0)} in ${category.name} (limit: ৳${limit.toStringAsFixed(0)}).',
+        await _notifyExceeded(
+          context,
+          categoryName: category.name,
+          spent: spent,
+          limit: limit,
+          month: month,
         );
-      } else if (spent > 0.8 * limit) {
-        NotificationHelper.showBudgetAlert(
-          title: 'Approaching Budget Limit',
-          body:
-              'You’ve spent over 80% of your ${category.name} budget (৳${spent.toStringAsFixed(0)} of ৳${limit.toStringAsFixed(0)}).',
+      } else if (spent >= 0.8 * limit) {
+        await _notifyApproaching(
+          context,
+          categoryName: category.name,
+          spent: spent,
+          limit: limit,
+          month: month,
         );
       }
-    });
+    }
+  }
+
+  Future<void> _notifyExceeded(
+    BuildContext context, {
+    required String categoryName,
+    required double spent,
+    required double limit,
+    required DateTime month,
+  }) async {
+    final over = (spent - limit).toStringAsFixed(0);
+    final title = 'Budget Exceeded: $categoryName';
+    final body =
+        'You exceeded this month’s $categoryName budget by ৳$over (spent ৳${spent.toStringAsFixed(0)} of ৳${limit.toStringAsFixed(0)}).';
+
+    final shouldShow = await BudgetAlertGuard.shouldNotify(
+      categoryKey: categoryName,
+      month: month,
+      type: 'exceeded',
+    );
+    if (!shouldShow) return;
+
+    // In‑app pop‑up
+    if (mounted) {
+      await AlertPopups.showBudgetPopup(
+        context,
+        title: title,
+        message: body,
+        primaryLabel: 'Open Summary',
+        onPrimary: () {
+          // TODO: Navigate to a summary route if you have one:
+          // Navigator.pushNamed(context, '/summary');
+        },
+      );
+    }
+
+    // System tray notification
+    await NotificationHelper.showBudgetAlert(title: title, body: body);
+  }
+
+  Future<void> _notifyApproaching(
+    BuildContext context, {
+    required String categoryName,
+    required double spent,
+    required double limit,
+    required DateTime month,
+  }) async {
+    final title = 'Approaching Budget: $categoryName';
+    final body =
+        'You’ve crossed 80% of your $categoryName budget this month (৳${spent.toStringAsFixed(0)} of ৳${limit.toStringAsFixed(0)}).';
+
+    final shouldShow = await BudgetAlertGuard.shouldNotify(
+      categoryKey: categoryName,
+      month: month,
+      type: 'approach',
+    );
+    if (!shouldShow) return;
+
+    // In‑app pop‑up
+    if (mounted) {
+      await AlertPopups.showBudgetPopup(
+        context,
+        title: title,
+        message: body,
+        primaryLabel: 'Open Summary',
+        onPrimary: () {
+          // TODO: Navigate to a summary route if you have one:
+          // Navigator.pushNamed(context, '/summary');
+        },
+      );
+    }
+
+    // System tray notification
+    await NotificationHelper.showBudgetAlert(title: title, body: body);
   }
 
   @override
@@ -75,6 +182,7 @@ class _SummaryWidgetState extends State<SummaryWidget> {
 
     final int balance = incomeTotal - expenseTotal;
 
+    // For the red banner summary
     final Map<BudgetCategory, double> spentByCategory = {};
     for (final expense in widget.expenses.where((e) => e.amount < 0)) {
       final category = _mapExpenseToBudgetCategory(expense.category);
@@ -85,7 +193,7 @@ class _SummaryWidgetState extends State<SummaryWidget> {
     final List<String> overspentCategories = [];
     spentByCategory.forEach((category, spent) {
       final limit = _budgetMap[category] ?? double.infinity;
-      if (spent > limit) {
+      if (limit != double.infinity && spent > limit) {
         overspentCategories.add(category.name);
       }
     });
@@ -113,8 +221,8 @@ class _SummaryWidgetState extends State<SummaryWidget> {
           padding: const EdgeInsets.all(8.0),
           child: Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -147,6 +255,8 @@ class _SummaryWidgetState extends State<SummaryWidget> {
         return BudgetCategory.work;
       case Category.grocery:
         return BudgetCategory.grocery;
+      case Category.bills:
+        return BudgetCategory.bills;
       default:
         return BudgetCategory.food;
     }
