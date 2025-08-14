@@ -94,53 +94,54 @@ class _ExpensesState extends State<Expenses> {
         title: const Text('Expense Manager'),
         actions: [
           IconButton(
-            onPressed: _openAddExpensePage, // ⬅️ use the full-screen opener
-            icon: const Icon(Icons.add),
-            tooltip: 'Add Expense',
-          ),
-          IconButton(
             onPressed: _logout,
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
           ),
         ],
+        // Removed the AppBar "+" so it only shows at the bottom
+        // actions: [],
       ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Selected Date: $formattedDate',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _showPicker = !_showPicker;
-                      });
-                    },
-                    child: const Text('Pick Date'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-               SavingTip(),
-              Chart(expenses: _filteredExpenses),
-              Expanded(
-                child: _filteredExpenses.isEmpty
-                    ? const Center(
-                        child: Text('No expenses found for this date.'),
-                      )
-                    : ExpensesList(
-                        expenses: _filteredExpenses,
-                        onRemoveExpense: _removeExpense,
-                      ),
-              ),
-            ],
+          // Bottom padding so content isn’t hidden behind the FAB
+          Padding(
+            padding: const EdgeInsets.only(bottom: 88),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Selected Date: $formattedDate',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _showPicker = !_showPicker;
+                        });
+                      },
+                      child: const Text('Pick Date'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                 SavingTip(),
+                Chart(expenses: _filteredExpenses),
+                Expanded(
+                  child: _filteredExpenses.isEmpty
+                      ? const Center(
+                          child: Text('No expenses found for this date.'),
+                        )
+                      : ExpensesList(
+                          expenses: _filteredExpenses,
+                          onRemoveExpense: _removeExpense,
+                        ),
+                ),
+              ],
+            ),
           ),
           PickDateOverlay(
             show: _showPicker,
@@ -154,6 +155,15 @@ class _ExpensesState extends State<Expenses> {
           ),
         ],
       ),
+
+      // ⬇️ New bottom-center Add button
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddExpensePage,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add Expense'),
+        heroTag: 'add_expense_fab',
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
