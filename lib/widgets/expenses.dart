@@ -93,11 +93,7 @@ class _ExpensesState extends State<Expenses> {
       appBar: AppBar(
         title: const Text('Expense Manager'),
         actions: [
-          IconButton(
-            onPressed: _logout,
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-          ),
+          
         ],
         // Removed the AppBar "+" so it only shows at the bottom
         // actions: [],
