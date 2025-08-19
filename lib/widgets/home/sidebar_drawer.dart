@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import 'package:khoroch/models/expense.dart';           // Category enum used by charts
+import 'package:khoroch/models/budget.dart';            // Budget + BudgetCategory
+import 'package:khoroch/database/database_helper.dart'; // getBudgetsForMonth
+
 import 'package:khoroch/screens/budget_settings_screen.dart';
 import 'package:khoroch/screens/summary_screen.dart';
-import 'package:khoroch/screens/daraz_deals_screen.dart'; // ✅ Import Smart Deals screen
-import 'package:khoroch/models/expense.dart';
+import 'package:khoroch/screens/daraz_deals_screen.dart';
+import 'package:khoroch/widgets/insights/monthly_insights_screen.dart';
+import 'package:khoroch/screens/data_export_screen.dart';
 
 class SidebarDrawer extends StatelessWidget {
   final VoidCallback onLogout;
@@ -14,6 +21,40 @@ class SidebarDrawer extends StatelessWidget {
     required this.expenses,
   }) : super(key: key);
 
+  /// Convert your BudgetCategory (used in DB) to the Expense Category enum (used by charts).
+  Category? _mapBudgetToExpenseCategory(BudgetCategory b) {
+    switch (b) {
+      case BudgetCategory.food:
+        return Category.food;
+      case BudgetCategory.leisure:
+        return Category.leisure;
+      case BudgetCategory.travel:
+        return Category.travel;
+      case BudgetCategory.work:
+        return Category.work;
+      case BudgetCategory.grocery:
+        return Category.grocery;
+      case BudgetCategory.bills:
+        return Category.bills;
+    }
+  }
+
+  /// Load budgets for the given month from SQLite and return Map<Category, double>
+  Future<Map<Category, double>> _loadBudgetsForMonth(DateTime month) async {
+    final rows = await DatabaseHelper.instance.getBudgetsForMonth(
+      DateTime(month.year, month.month), // normalize to month start
+    );
+
+    final map = <Category, double>{};
+    for (final Budget b in rows) {
+      final c = _mapBudgetToExpenseCategory(b.category);
+      if (c != null && b.amount > 0) {
+        map[c] = b.amount;
+      }
+    }
+    return map;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -21,26 +62,42 @@ class SidebarDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
             child: const Text(
               'Khoroch',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
 
-          /// 📊 Chart Placeholder
+          /// 📊 Charts (Monthly Insights)
           ListTile(
             leading: const Icon(Icons.bar_chart),
             title: const Text('Charts'),
-            onTap: () {
-              Navigator.pop(context);
-              // TODO: Implement Chart Navigation
+            onTap: () async {
+              Navigator.pop(context); // close the drawer
+
+              final month = DateTime(DateTime.now().year, DateTime.now().month);
+
+              // Load real budgets for the selected month from SQLite
+              final budgets = await _loadBudgetsForMonth(month);
+
+              if (budgets.isEmpty) {
+                // Optional UX: nudge to set budgets if none saved for this month
+                final label = DateFormat.yMMM().format(month);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('No budgets saved for $label. Set budgets first.')),
+                );
+              }
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MonthlyInsightsScreen(
+                    expenses: expenses,
+                    month: month,                   // ensures charts align with loaded budgets
+                    categoryBudgets: budgets,       // ✅ real saved budgets from DB
+                  ),
+                ),
+              );
             },
           ),
 
@@ -95,12 +152,34 @@ class SidebarDrawer extends StatelessWidget {
             },
           ),
 
+          ListTile(
+  leading: const Icon(Icons.trending_up),
+  title: const Text('Overspend Insights'),
+  onTap: () {
+    Navigator.pop(context);
+    Navigator.pushNamed(context, '/overspend-insights');
+  },
+),
+
           /// 🔓 Logout
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: onLogout,
           ),
+
+          ListTile(
+  leading: const Icon(Icons.backup_outlined),
+  title: const Text('Export & Backup'),
+  onTap: () {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DataExportScreen()),
+    );
+  },
+),
+
 
           const Divider(),
 

@@ -7,7 +7,7 @@ import 'package:khoroch/models/deal.dart';
 class DealService {
   static const String _localIp = '192.168.0.105'; // Update with your IP
   static const int _port = 3000;
-  static const String _ngrokDomain = 'c35777a6a055.ngrok-free.app';
+  static const String _ngrokDomain = '5869117e50b6.ngrok-free.app';
   static const bool _useNgrok = true;
 
   static String _resolveBaseUrl() {

@@ -1,0 +1,15 @@
+{
+  "month": "2025-08",
+  "currency": "BDT",
+  "budgets": {
+    "leisure": 1000.0,
+    "food": 3000.0,
+    "bills": 1000.0,
+    "work": 1000.0,
+    "grocery": 1000.0,
+    "travel": 1000.0
+  },
+  "total": 8000.0,
+  "exported_at": "2025-08-19T01:58:24",
+  "source": "khoroch"
+}

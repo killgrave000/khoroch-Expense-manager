@@ -9,6 +9,7 @@ import 'package:khoroch/screens/register_screen.dart';
 import 'package:khoroch/screens/settings_screen.dart';
 import 'package:khoroch/screens/daraz_deals_screen.dart';
 import 'package:khoroch/widgets/expenses.dart';
+import 'package:khoroch/screens/overspend_insights_screen.dart';
 
 // Providers
 import 'package:khoroch/providers/theme_provider.dart';
@@ -114,6 +115,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const Expenses(),
         '/settings': (context) => const SettingsScreen(),
         '/deals': (context) => const DarazDealsScreen(),
+        '/overspend-insights': (_) => const OverspendInsightsScreen(),
       },
     );
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:khoroch/services/export_csv_service.dart';
+
 
 class SavingGoalWidget extends StatelessWidget {
   final double target;
@@ -22,6 +24,28 @@ class SavingGoalWidget extends StatelessWidget {
             LinearProgressIndicator(value: percent),
             const SizedBox(height: 8),
             Text("Saved: ৳${current.toStringAsFixed(0)}"),
+
+            IconButton(
+  icon: const Icon(Icons.download_rounded),
+  tooltip: 'Export CSV',
+  onPressed: () async {
+    try {
+      final path = await ExportCsvService.exportExpensesHistoryCsv(shareAfter: true);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('CSV ready: $path')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
+    }
+  },
+),
+
+
+
           ],
         ),
       ),
