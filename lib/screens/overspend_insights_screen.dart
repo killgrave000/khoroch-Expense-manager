@@ -24,7 +24,6 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
   bool _loading = true;
   String? _error;
 
-  // Adjust threshold to your preference
   static const double riskThreshold = 0.60;
 
   @override
@@ -80,11 +79,14 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
     super.dispose();
   }
 
-  // ---------- Data helpers ----------
+  // =============================================================
+  // DATA HELPERS
+  // =============================================================
 
   Future<List<Expense>> _loadMonthExpenses(DateTime month) async {
     final start = DateTime(month.year, month.month, 1);
     final end = DateTime(month.year, month.month + 1, 1).subtract(const Duration(days: 1));
+
     try {
       final all = await DatabaseHelper.instance.getAllExpenses();
       return all.where((e) => !e.date.isBefore(start) && !e.date.isAfter(end)).toList();
@@ -93,17 +95,25 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
     }
   }
 
+  // FIXED: Load budgets from DB
   Future<Map<String, double>> _loadBudgetsForMonth(DateTime month) async {
-    final monthKey = DateFormat('yyyy-MM').format(month);
+    try {
+      final list = await DatabaseHelper.instance.getBudgetsForMonth(month);
 
-    // If you have a DB call, prefer it:
-    // final jsonStr = await DatabaseHelper.instance.getMonthBudgetJson(monthKey);
-    // if (jsonStr != null && jsonStr.isNotEmpty) {
-    //   final Map<String, dynamic> m = json.decode(jsonStr);
-    //   return m.map((k, v) => MapEntry(k.toString().toLowerCase(), (v as num).toDouble()));
-    // }
+if (list.isNotEmpty) {
+  final map = <String, double>{};
 
-    // Fallback to a bundled JSON asset
+  for (final b in list) {
+    final key = b.category.name.toLowerCase();
+    map[key] = b.amount;
+  }
+
+  return map;
+}
+
+    } catch (_) {}
+
+    // Fallback ONLY if DB empty
     final txt = await rootBundle.loadString('assets/data/khoroch_month_budget_202508.json');
     final m = json.decode(txt) as Map<String, dynamic>;
     final budgets = (m['budgets'] as Map<String, dynamic>).map(
@@ -119,12 +129,15 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
         "category": e.category.name.toLowerCase(),
       }).toList();
 
-  // ---------- UI helpers ----------
+  // =============================================================
+  // COMPUTED VALUES
+  // =============================================================
 
   double get _spendMtd {
     final now = DateTime.now();
     final sameMonth = now.year == _month.year && now.month == _month.month;
     final dayCut = sameMonth ? now.day : DateUtils.getDaysInMonth(_month.year, _month.month);
+
     return _monthExpenses
         .where((e) => e.date.day <= dayCut)
         .fold<double>(0.0, (s, e) => s + e.amount);
@@ -132,15 +145,21 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
 
   double get _totalBudget => (_budgets ?? {}).values.fold<double>(0.0, (s, v) => s + v);
 
+  // =============================================================
+  // UI HELPERS
+  // =============================================================
+
   Widget _riskChip() {
     final p = _prob ?? 0.0;
     final isHigh = p >= riskThreshold;
     final color = isHigh ? Colors.red : Colors.green;
     final label = isHigh ? 'High Risk' : 'Low Risk';
+
     return Chip(
       backgroundColor: color.withOpacity(.12),
       side: BorderSide(color: color),
-      label: Text('$label • p=${p.toStringAsFixed(2)}', style: TextStyle(color: color)),
+      label: Text('$label • p=${p.toStringAsFixed(2)}',
+          style: TextStyle(color: color)),
     );
   }
 
@@ -185,6 +204,7 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 12),
                       _KpiCard(title: 'Overspend Risk', trailing: _riskChip()),
                       const SizedBox(height: 16),
@@ -205,12 +225,15 @@ class _OverspendInsightsScreenState extends State<OverspendInsightsScreen> {
   }
 }
 
-// =============== UI widgets ===============
+// ===================================================================
+// UI WIDGETS
+// ===================================================================
 
 class _KpiCard extends StatelessWidget {
   final String title;
   final String? value;
   final Widget? trailing;
+
   const _KpiCard({required this.title, this.value, this.trailing});
 
   @override
@@ -228,7 +251,10 @@ class _KpiCard extends StatelessWidget {
                 if (value != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(value!, style: Theme.of(context).textTheme.titleLarge),
+                    child: Text(
+                      value!,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
               ]),
             ),
@@ -244,6 +270,7 @@ class _ChartBlock extends StatelessWidget {
   final List<Expense> expenses;
   final Color accent;
   final double riskProb;
+
   const _ChartBlock({
     required this.expenses,
     required this.accent,
@@ -274,8 +301,10 @@ class _ChartBlock extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: accent),
                   ),
-                  child: Text('Risk ${ (riskProb*100).toStringAsFixed(0)}%',
-                      style: TextStyle(color: accent, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Risk ${(riskProb * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(color: accent, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
@@ -293,13 +322,17 @@ class _ChartBlock extends StatelessWidget {
 class _BudgetList extends StatelessWidget {
   final Map<String, double> budgets;
   final List<Expense> expenses;
+
   const _BudgetList({required this.budgets, required this.expenses});
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final mtd = expenses.where((e) =>
-        e.date.year == now.year && e.date.month == now.month && e.date.day <= now.day);
+
+    final mtd = expenses.where(
+      (e) => e.date.year == now.year && e.date.month == now.month && e.date.day <= now.day,
+    );
+
     final byCat = <String, double>{};
     for (final e in mtd) {
       final k = e.category.name.toLowerCase();
@@ -307,6 +340,7 @@ class _BudgetList extends StatelessWidget {
     }
 
     final keys = budgets.keys.toList()..sort();
+
     return Card(
       elevation: 0.5,
       clipBehavior: Clip.antiAlias,
@@ -324,10 +358,12 @@ class _BudgetList extends StatelessWidget {
               ],
             ),
           ),
+
           ...keys.map((k) {
             final b = budgets[k] ?? 0.0;
             final s = byCat[k] ?? 0.0;
             final over = s > b && b > 0;
+
             return ListTile(
               dense: true,
               title: Text(k[0].toUpperCase() + k.substring(1)),
@@ -339,16 +375,23 @@ class _BudgetList extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('৳${s.toStringAsFixed(0)} / ৳${b.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        color: over ? Colors.red : null,
-                        fontWeight: FontWeight.w600,
-                      )),
-                  if (over) const Text('Overspent', style: TextStyle(color: Colors.red)),
+                  Text(
+                    '৳${s.toStringAsFixed(0)} / ৳${b.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: over ? Colors.red : null,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (over)
+                    const Text(
+                      'Overspent',
+                      style: TextStyle(color: Colors.red),
+                    ),
                 ],
               ),
             );
           }),
+
           const SizedBox(height: 6),
         ],
       ),
