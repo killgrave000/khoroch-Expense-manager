@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:khoroch/models/expense.dart';
 import 'package:khoroch/widgets/expenses_list/expense_item.dart';
-import 'package:khoroch/utils/expense_utils.dart'; // NEW: import utility
+import 'package:khoroch/utils/expense_utils.dart';
 
+// UPDATED: Added controller parameter
 class ExpensesList extends StatelessWidget {
   const ExpensesList({
     super.key,
     required this.expenses,
     required this.onRemoveExpense,
+    this.controller,
   });
 
   final List<Expense> expenses;
   final void Function(Expense expense) onRemoveExpense;
 
+  // NEW
+  final ScrollController? controller;
+
   @override
   Widget build(BuildContext context) {
-    final monthlySummary = getMonthlyExpenses(expenses); // NEW
+    final monthlySummary = getMonthlyExpenses(expenses);
 
     return ListView(
+      controller: controller, // NEW: attach scroll controller
       children: [
         // Monthly Summary Section
         if (monthlySummary.isNotEmpty)

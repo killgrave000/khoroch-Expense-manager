@@ -19,13 +19,13 @@ class Chart extends StatelessWidget {
   }
 
   double get maxTotalExpense {
-    double maxTotalExpense = 0;
+    double maxValue = 0;
     for (final bucket in buckets) {
-      if (bucket.totalExpenses > maxTotalExpense) {
-        maxTotalExpense = bucket.totalExpenses;
+      if (bucket.totalExpenses > maxValue) {
+        maxValue = bucket.totalExpenses;
       }
     }
-    return maxTotalExpense;
+    return maxValue;
   }
 
   @override
@@ -33,7 +33,9 @@ class Chart extends StatelessWidget {
     final isDarkMode =
         MediaQuery.of(context).platformBrightness == Brightness.dark;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       width: double.infinity,
@@ -51,21 +53,31 @@ class Chart extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // -----------------
+          // ANIMATED BARS
+          // -----------------
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 for (final bucket in buckets)
-                  ChartBar(
-                    fill: bucket.totalExpenses == 0
-                        ? 0
-                        : bucket.totalExpenses / maxTotalExpense,
-                    isOverspent: bucket.totalExpenses > 10000,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    child: ChartBar(
+                      fill: bucket.totalExpenses == 0
+                          ? 0
+                          : bucket.totalExpenses / maxTotalExpense,
+                      isOverspent: bucket.totalExpenses > 10000,
+                    ),
                   ),
               ],
             ),
           ),
+
           const SizedBox(height: 12),
+
+          // Icons row
           Row(
             children: buckets
                 .map(
